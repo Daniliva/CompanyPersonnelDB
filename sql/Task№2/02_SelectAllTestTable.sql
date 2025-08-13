@@ -1,0 +1,5 @@
+SELECT [ID]
+      ,[Name]
+      ,[Value]
+      ,[CreatedAt]
+  FROM [TestTable]
