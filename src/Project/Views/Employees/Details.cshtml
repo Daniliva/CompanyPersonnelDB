@@ -1,0 +1,94 @@
+﻿@model Project.Models.Employee
+@{
+    ViewData["Title"] = "Employee Details";
+}
+
+<div class="row">
+    <div class="col-md-6 mx-auto">
+        <h1 class="display-4 text-center mb-4">Edit Employee</h1>
+        @if (Model == null)
+        {
+        <div class="alert alert-danger" role="alert">
+            Employee not found.
+        </div>
+        return;
+        }
+        <form asp-action="Details" method="post">
+            <input type="hidden" asp-for="EmployeeId" />
+            <input type="hidden" asp-for="CompanyId" />
+            <div class="mb-3">
+                <label asp-for="LastName" class="form-label"></label>
+                <input asp-for="LastName" class="form-control" />
+                <span asp-validation-for="LastName" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="FirstName" class="form-label"></label>
+                <input asp-for="FirstName" class="form-control" />
+                <span asp-validation-for="FirstName" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="MiddleName" class="form-label"></label>
+                <input asp-for="MiddleName" class="form-control" />
+                <span asp-validation-for="MiddleName" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Address" class="form-label"></label>
+                <input asp-for="Address" class="form-control" />
+                <span asp-validation-for="Address" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Phone" class="form-label"></label>
+                <input asp-for="Phone" class="form-control" />
+                <span asp-validation-for="Phone" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="BirthDate" class="form-label"></label>
+                <input asp-for="BirthDate" type="date" class="form-control" />
+                <span asp-validation-for="BirthDate" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="HireDate" class="form-label"></label>
+                <input asp-for="HireDate" type="date" class="form-control" />
+                <span asp-validation-for="HireDate" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Salary" class="form-label"></label>
+                <input asp-for="Salary" type="number" step="0.01" class="form-control" />
+                <span asp-validation-for="Salary" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="DepartmentId" class="form-label">Department</label>
+                <select asp-for="DepartmentId" class="form-select">
+                    @foreach (var dept in ViewBag.Departments ?? new List
+                    <Project.Models.Department>
+                        ())
+                        {
+                        <option value="@dept.DepartmentId" selected="@(dept.DepartmentId == Model.DepartmentId)">@dept.Name</option>
+                        }
+                </select>
+                <span asp-validation-for="DepartmentId" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="PositionId" class="form-label">Position</label>
+                <select asp-for="PositionId" class="form-select">
+                    @foreach (var pos in ViewBag.Positions ?? new List
+                    <Project.Models.Position>
+                        ())
+                        {
+                        <option value="@pos.PositionId" selected="@(pos.PositionId == Model.PositionId)">@pos.Name</option>
+                        }
+                </select>
+                <span asp-validation-for="PositionId" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <button type="submit" class="btn btn-primary">Save</button>
+                <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+<script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+}

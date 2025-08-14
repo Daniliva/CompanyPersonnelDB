@@ -1,0 +1,29 @@
+﻿@model Project.Models.Company
+@{
+    ViewData["Title"] = "Home";
+}
+
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <h1 class="display-4 text-center mb-4">Company Information</h1>
+        @if (ViewBag.Company != null)
+        {
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">@ViewBag.Company.CompanyName</h4>
+                </div>
+                <div class="card-body">
+                    <p class="card-text"><strong>Address:</strong> @ViewBag.Company.CompanyAddress</p>
+                    <p class="card-text"><strong>Phone:</strong> @ViewBag.Company.CompanyPhone</p>
+                    <p class="card-text"><strong>Description:</strong> @ViewBag.Company.Description</p>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-warning" role="alert">
+                Company information not found.
+            </div>
+        }
+    </div>
+</div>

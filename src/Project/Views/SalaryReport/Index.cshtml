@@ -1,0 +1,114 @@
+﻿@model IEnumerable<Project.Models.Employee>
+@using Project.Models
+@{
+    ViewData["Title"] = "Salary Report";
+    var departmentId = Context.Request.Query["departmentId"].ToString();
+    var positionId = Context.Request.Query["positionId"].ToString();
+}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="display-4 text-center mb-4">Salary Report</h1>
+        <form asp-action="Index" method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Department</label>
+                <select name="departmentId" class="form-select">
+                    <option value="">All Departments</option>
+                    @foreach (var dept in (ViewBag.Departments as List<Department> ?? new List<Department>()))
+                    {
+                        <option value="@dept.DepartmentId" selected="@(dept.DepartmentId.ToString() == departmentId)">@dept.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Position</label>
+                <select name="positionId" class="form-select">
+                    <option value="">All Positions</option>
+                    @foreach (var pos in (ViewBag.Positions as List<Position> ?? new List<Position>()))
+                    {
+                        <option value="@pos.PositionId" selected="@(pos.PositionId.ToString() == positionId)">@pos.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-12 mt-3">
+                <button type="submit" class="btn btn-primary">Filter</button>
+                <a asp-action="Index" class="btn btn-secondary">Clear Filters</a>
+                <a asp-action="ExportToTxt" asp-route-departmentId="@departmentId" asp-route-positionId="@positionId" class="btn btn-success">Export to TXT</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (ViewBag.TotalSalary != null)
+{
+    <div class="alert alert-info text-center">
+        @{
+            var departments = ViewBag.Departments as List<Department> ?? new List<Department>();
+            var positions = ViewBag.Positions as List<Position> ?? new List<Position>();
+            var dept = departments.FirstOrDefault(d => d.DepartmentId.ToString() == departmentId);
+            var pos = positions.FirstOrDefault(p => p.PositionId.ToString() == positionId);
+            var filterMessage = "";
+            if (!string.IsNullOrEmpty(departmentId) && !string.IsNullOrEmpty(positionId))
+            {
+                filterMessage = $"Department: {dept?.Name ?? "Unknown"} and Position: {pos?.Name ?? "Unknown"}";
+            }
+            else if (!string.IsNullOrEmpty(departmentId))
+            {
+                filterMessage = $"Department: {dept?.Name ?? "Unknown"}";
+            }
+            else if (!string.IsNullOrEmpty(positionId))
+            {
+                filterMessage = $"Position: {pos?.Name ?? "Unknown"}";
+            }
+            else
+            {
+                filterMessage = "All Employees";
+            }
+        }
+        Total Salary for @filterMessage: @ViewBag.TotalSalary.ToString("C")
+    </div>
+}
+<div class="row">
+    <div class="col-12">
+        <table class="table table-striped table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Employee ID</th>
+                    <th>Last Name</th>
+                    <th>First Name</th>
+                    <th>Middle Name</th>
+                    <th>Salary</th>
+                    <th>Department</th>
+                    <th>Position</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (ViewBag.Employees != null && (ViewBag.Employees as IEnumerable<Employee>)?.Any() == true)
+                {
+                    var departments = ViewBag.Departments as List<Department> ?? new List<Department>();
+                    var positions = ViewBag.Positions as List<Position> ?? new List<Position>();
+                    @foreach (var employee in (ViewBag.Employees as IEnumerable<Employee>))
+                    {
+                        var dept = departments.FirstOrDefault(d => d.DepartmentId == employee.DepartmentId);
+                        var pos = positions.FirstOrDefault(p => p.PositionId == employee.PositionId);
+                        <tr>
+                            <td>@employee.EmployeeId</td>
+                            <td>@employee.LastName</td>
+                            <td>@employee.FirstName</td>
+                            <td>@employee.MiddleName</td>
+                            <td>@employee.Salary.ToString("C")</td>
+                            <td>@(dept?.Name ?? "N/A")</td>
+                            <td>@(pos?.Name ?? "N/A")</td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="7" class="text-center">No employees found.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
