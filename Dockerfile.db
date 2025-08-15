@@ -1,0 +1,23 @@
+
+FROM mcr.microsoft.com/mssql/server:2019-latest
+
+
+USER root
+RUN apt-get update && \
+    apt-get install -y curl gnupg && \
+    curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
+    curl https://packages.microsoft.com/config/ubuntu/20.04/prod.list > /etc/apt/sources.list.d/mssql-release.list && \
+    apt-get update && \
+    ACCEPT_EULA=Y apt-get install -y mssql-tools unixodbc-dev && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+
+COPY ./src/sql/init-db.sql /usr/config/init-db.sql
+
+
+RUN chmod +r /usr/config/init-db.sql
+
+USER mssql
+
+
+CMD /bin/bash -c "/opt/mssql/bin/sqlservr & sleep 30 && /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P $SA_PASSWORD -d master -i /usr/config/init-db.sql && wait"

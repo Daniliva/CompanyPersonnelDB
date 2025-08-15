@@ -1,0 +1,39 @@
+version: '3.9'
+
+services:
+  app:
+    build:
+      context: src/Project
+      dockerfile: Dockerfile
+    ports:
+      - "5000:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=db,1433;Database=CompanyPersonnelDB;User Id=sa;Password=YourStrongPassword123;Encrypt=true;TrustServerCertificate=true;
+    depends_on:
+      - db
+    networks:
+      - app-network
+
+  db:
+    build:
+      context: .
+      dockerfile: Dockerfile.db
+    ports:
+      - "1433:1433"
+    environment:
+      - SA_PASSWORD=YourStrongPassword123
+      - ACCEPT_EULA=Y
+      - MSSQL_PID=Express
+    volumes:
+      - db-data:/var/opt/mssql
+      - ./src/sql/init-db.sql:/usr/config/init-db.sql
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  db-data:
