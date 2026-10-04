@@ -1,0 +1,287 @@
+diff --git a/src/Project.Tests/EmployeeServiceTests.cs b/src/Project.Tests/EmployeeServiceTests.cs
+index 4cbb67d..841e974 100644
+--- a/src/Project.Tests/EmployeeServiceTests.cs
++++ b/src/Project.Tests/EmployeeServiceTests.cs
+@@ -65,7 +65,7 @@ public class EmployeeServiceTests
+     public async Task Update_without_a_middle_name_does_not_crash_and_stores_NULL()
+     {
+         var e = Sample();
+-        e.MiddleName = null!;
++        e.MiddleName = null;
+ 
+         var updated = await service.UpdateEmployeeAsync(e);
+ 
+@@ -102,7 +102,7 @@ public class EmployeeServiceTests
+     {
+         var e = Sample();
+         e.Address = "";
+-        e.Phone = null!;
++        e.Phone = null;
+ 
+         await service.UpdateEmployeeAsync(e);
+ 
+diff --git a/src/Project.Tests/SalaryReportFormatterTests.cs b/src/Project.Tests/SalaryReportFormatterTests.cs
+index 3c6fad7..a681efc 100644
+--- a/src/Project.Tests/SalaryReportFormatterTests.cs
++++ b/src/Project.Tests/SalaryReportFormatterTests.cs
+@@ -8,7 +8,7 @@ namespace Project.Tests;
+ public class SalaryReportFormatterTests
+ {
+     private static Employee E(int id = 1, string last = "Smith", string first = "John", string? middle = "Paul", decimal salary = 1000m, int dept = 2, int pos = 3) =>
+-        new() { EmployeeId = id, LastName = last, FirstName = first, MiddleName = middle!, Salary = salary, DepartmentId = dept, PositionId = pos };
++        new() { EmployeeId = id, LastName = last, FirstName = first, MiddleName = middle, Salary = salary, DepartmentId = dept, PositionId = pos };
+ 
+     [Fact]
+     public void Empty_report_is_only_the_header_line()
+diff --git a/src/Project/Controllers/EmployeesController.cs b/src/Project/Controllers/EmployeesController.cs
+index cdd8aad..f3034db 100644
+--- a/src/Project/Controllers/EmployeesController.cs
++++ b/src/Project/Controllers/EmployeesController.cs
+@@ -41,13 +41,13 @@ namespace Project.Controllers
+         }
+ 
+         [HttpPost]
+-        // TODO: protect this POST against CSRF.
++        [ValidateAntiForgeryToken]
+         public async Task<IActionResult> Details(Employee employee)
+         {
+             if (ModelState.IsValid)
+             {
+-                await _employeeService.UpdateEmployeeAsync(employee);
+-                // TODO: UpdateEmployeeAsync returns false when no row was changed - answer 404 then.
++                var updated = await _employeeService.UpdateEmployeeAsync(employee);
++                if (!updated) return NotFound();
+                 return RedirectToAction("Index");
+             }
+ 
+diff --git a/src/Project/DataAccess/EmployeeQueryBuilder.cs b/src/Project/DataAccess/EmployeeQueryBuilder.cs
+index 3c0bd06..2682506 100644
+--- a/src/Project/DataAccess/EmployeeQueryBuilder.cs
++++ b/src/Project/DataAccess/EmployeeQueryBuilder.cs
+@@ -20,15 +20,42 @@ public static class EmployeeQueryBuilder
+     /// </summary>
+     public static BuiltQuery BuildEmployeeSearch(int companyId, int? departmentId, int? positionId, string? lastName, string? firstName, string? middleName)
+     {
+-        throw new NotImplementedException("TODO");
++        var sql = SqlQueries.GetEmployeesBase;
++        var parameters = new List<SqlParameter> { new("@companyId", companyId) };
++
++        if (departmentId.HasValue)
++        {
++            sql += SqlQueries.AppendDepartmentFilter;
++            parameters.Add(new SqlParameter("@departmentId", departmentId.Value));
++        }
++
++        if (positionId.HasValue)
++        {
++            sql += SqlQueries.AppendPositionFilter;
++            parameters.Add(new SqlParameter("@positionId", positionId.Value));
++        }
++
++        AddNamePart(ref sql, parameters, "last_name", "@lastName", lastName);
++        AddNamePart(ref sql, parameters, "first_name", "@firstName", firstName);
++        AddNamePart(ref sql, parameters, "middle_name", "@middleName", middleName);
++
++        sql += SqlQueries.OrderEmployees;
++        return new BuiltQuery(sql, parameters);
+     }
+ 
+     /// <summary>Escapes <c>\ % _ [</c> with a backslash for use with <c>LIKE ... ESCAPE '\'</c>.</summary>
+     public static string EscapeLike(string value) =>
+-        throw new NotImplementedException("TODO");
++        value.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_").Replace("[", "\\[");
+ 
+     private static void AddNamePart(ref string sql, List<SqlParameter> parameters, string column, string parameter, string? value)
+     {
+-        throw new NotImplementedException("TODO");
++        var trimmed = value?.Trim();
++        if (string.IsNullOrEmpty(trimmed))
++        {
++            return;
++        }
++
++        sql += $" AND {column} LIKE '%' + {parameter} + '%' ESCAPE '\\'";
++        parameters.Add(new SqlParameter(parameter, EscapeLike(trimmed)));
+     }
+ }
+diff --git a/src/Project/Middlewares/ExceptionMiddleware.cs b/src/Project/Middlewares/ExceptionMiddleware.cs
+index 698968a..c86c0fe 100644
+--- a/src/Project/Middlewares/ExceptionMiddleware.cs
++++ b/src/Project/Middlewares/ExceptionMiddleware.cs
+@@ -24,6 +24,11 @@ namespace Project.Middlewares
+             {
+                 _logger.LogError(ex, "An unhandled exception occurred.");
+ 
++                if (httpContext.Response.HasStarted)
++                {
++                    throw;
++                }
++
+                 await HandleExceptionAsync(httpContext, ex);
+             }
+         }
+@@ -35,7 +40,17 @@ namespace Project.Middlewares
+         /// </summary>
+         private static Task HandleExceptionAsync(HttpContext context, Exception exception)
+         {
+-            throw new NotImplementedException("TODO");
++            context.Response.Clear();
++            context.Response.ContentType = "application/json";
++            context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
++
++            var message = "Internal Server Error";
++            if (context.RequestServices.GetRequiredService<IHostEnvironment>().IsDevelopment())
++            {
++                message = exception.Message + "\n" + exception.StackTrace;
++            }
++
++            return context.Response.WriteAsync(JsonSerializer.Serialize(new { error = message }));
+         }
+     }
+ }
+diff --git a/src/Project/Models/Employee.cs b/src/Project/Models/Employee.cs
+index a3fbe80..ff3281e 100644
+--- a/src/Project/Models/Employee.cs
++++ b/src/Project/Models/Employee.cs
+@@ -20,16 +20,16 @@ public class Employee
+ 
+     [StringLength(100, ErrorMessage = "Middle name cannot exceed 100 characters")]
+     [Column("middle_name")]
+-    public string MiddleName { get; set; }
++    public string? MiddleName { get; set; }
+ 
+     [StringLength(255, ErrorMessage = "Address cannot exceed 255 characters")]
+     [Column("address")]
+-    public string Address { get; set; }
++    public string? Address { get; set; }
+ 
+     [StringLength(50, ErrorMessage = "Phone cannot exceed 50 characters")]
+     [Phone(ErrorMessage = "Invalid phone number format")]
+     [Column("phone")]
+-    public string Phone { get; set; }
++    public string? Phone { get; set; }
+ 
+     [Column("birth_date")]
+     public DateTime? BirthDate { get; set; }
+diff --git a/src/Project/Services/EmployeeService.cs b/src/Project/Services/EmployeeService.cs
+index d2f19a2..cfe119a 100644
+--- a/src/Project/Services/EmployeeService.cs
++++ b/src/Project/Services/EmployeeService.cs
+@@ -16,19 +16,38 @@ public class EmployeeService : IEmployeeService
+ 
+     public async Task<List<Employee>> GetEmployeesAsync(int companyId, int? departmentId = null, int? positionId = null, string? lastName = null, string? firstName = null, string? middleName = null)
+     {
+-        throw new NotImplementedException("TODO");
++        var query = EmployeeQueryBuilder.BuildEmployeeSearch(companyId, departmentId, positionId, lastName, firstName, middleName);
++        return await _dal.QueryAsync<Employee>(query.Sql, query.Parameters.ToArray());
+     }
+ 
+     public async Task<Employee?> GetEmployeeByIdAsync(int employeeId)
+     {
+-        throw new NotImplementedException("TODO");
++        var results = await _dal.QueryAsync<Employee>(SqlQueries.GetEmployeeById, new SqlParameter("@employeeId", employeeId));
++        return results.FirstOrDefault();
+     }
+ 
+     public async Task<bool> UpdateEmployeeAsync(Employee employee)
+     {
+-        throw new NotImplementedException("TODO");
++        ArgumentNullException.ThrowIfNull(employee);
++
++        var parameters = new[]
++        {
++            new SqlParameter("@employeeId", employee.EmployeeId),
++            new SqlParameter("@lastName", employee.LastName.Trim()),
++            new SqlParameter("@firstName", employee.FirstName.Trim()),
++            new SqlParameter("@middleName", NullIfBlank(employee.MiddleName)),
++            new SqlParameter("@address", NullIfBlank(employee.Address)),
++            new SqlParameter("@phone", NullIfBlank(employee.Phone)),
++            new SqlParameter("@birthDate", employee.BirthDate ?? (object)DBNull.Value),
++            new SqlParameter("@hireDate", employee.HireDate),
++            new SqlParameter("@salary", employee.Salary),
++            new SqlParameter("@departmentId", employee.DepartmentId),
++            new SqlParameter("@positionId", employee.PositionId)
++        };
++
++        return await _dal.ExecuteNonQueryAsync(SqlQueries.UpdateEmployee, parameters) > 0;
+     }
+ 
+     private static object NullIfBlank(string? value) =>
+-        throw new NotImplementedException("TODO");
++        string.IsNullOrWhiteSpace(value) ? DBNull.Value : value.Trim();
+ }
+diff --git a/src/Project/Services/SalaryReportFormatter.cs b/src/Project/Services/SalaryReportFormatter.cs
+index ad65ad3..d44de6d 100644
+--- a/src/Project/Services/SalaryReportFormatter.cs
++++ b/src/Project/Services/SalaryReportFormatter.cs
+@@ -16,9 +16,23 @@ public static class SalaryReportFormatter
+     /// </summary>
+     public static string ToTxt(IEnumerable<Employee> employees)
+     {
+-        throw new NotImplementedException("TODO");
++        var sb = new StringBuilder();
++        sb.Append(Header).Append('\n');
++
++        foreach (var e in employees)
++        {
++            sb.Append(e.EmployeeId.ToString(CultureInfo.InvariantCulture)).Append('\t')
++              .Append(Clean(e.LastName)).Append('\t')
++              .Append(Clean(e.FirstName)).Append('\t')
++              .Append(Clean(e.MiddleName)).Append('\t')
++              .Append(e.Salary.ToString("F2", CultureInfo.InvariantCulture)).Append('\t')
++              .Append(e.DepartmentId.ToString(CultureInfo.InvariantCulture)).Append('\t')
++              .Append(e.PositionId.ToString(CultureInfo.InvariantCulture)).Append('\n');
++        }
++
++        return sb.ToString();
+     }
+ 
+     private static string Clean(string? value) =>
+-        throw new NotImplementedException("TODO");
++        value is null ? string.Empty : value.Replace('\t', ' ').Replace('\r', ' ').Replace('\n', ' ');
+ }
+diff --git a/src/Project/Services/SalaryService.cs b/src/Project/Services/SalaryService.cs
+index 5db83d6..771f741 100644
+--- a/src/Project/Services/SalaryService.cs
++++ b/src/Project/Services/SalaryService.cs
+@@ -16,11 +16,38 @@ public class SalaryService : ISalaryService
+ 
+     public async Task<List<Employee>> GetSalaryReportAsync(int companyId, int? departmentId = null, int? positionId = null)
+     {
+-        throw new NotImplementedException("TODO");
++        var query = SqlQueries.GetSalaryReportBase;
++        var parameters = new List<SqlParameter> { new SqlParameter("@companyId", companyId) };
++
++        if (departmentId.HasValue)
++        {
++            query += SqlQueries.AppendDepartmentFilter;
++            parameters.Add(new SqlParameter("@departmentId", departmentId.Value));
++        }
++
++        if (positionId.HasValue)
++        {
++            query += SqlQueries.AppendPositionFilter;
++            parameters.Add(new SqlParameter("@positionId", positionId.Value));
++        }
++
++        query += SqlQueries.OrderSalaryReport;
++        return await _dal.QueryAsync<Employee>(query, parameters.ToArray());
+     }
+ 
+     public async Task<decimal?> GetTotalSalaryByDepartmentAsync(int companyId, int departmentId, int? positionId)
+     {
+-        throw new NotImplementedException("TODO");
++        var query = SqlQueries.GetTotalSalaryByDepartment;
++        var parameters = new List<SqlParameter> { new SqlParameter("@departmentId", departmentId), new SqlParameter("@companyId", companyId) };
++
++        if (positionId.HasValue)
++        {
++            query += SqlQueries.AppendPositionFilter;
++            parameters.Add(new SqlParameter("@positionId", positionId.Value));
++        }
++
++        var result = await _dal.ScalarAsync(query, parameters.ToArray());
++
++        return result is null or DBNull ? null : Convert.ToDecimal(result);
+     }
+ }
