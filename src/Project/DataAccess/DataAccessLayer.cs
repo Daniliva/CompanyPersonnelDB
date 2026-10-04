@@ -1,8 +1,8 @@
-﻿using Microsoft.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 
 namespace Project.DataAccess
 {
-    public class DataAccessLayer
+    public class DataAccessLayer : IDataAccess
     {
         private readonly string _connectionString;
 
@@ -35,7 +35,7 @@ namespace Project.DataAccess
             return results;
         }
 
-        public async Task<object> ScalarAsync(string query, params SqlParameter[] parameters)
+        public async Task<object?> ScalarAsync(string query, params SqlParameter[] parameters)
         {
             using (var connection = new SqlConnection(_connectionString))
             {
@@ -43,7 +43,7 @@ namespace Project.DataAccess
                 using (var command = new SqlCommand(query, connection))
                 {
                     command.Parameters.AddRange(parameters);
-                    return (await command.ExecuteScalarAsync())!;
+                    return await command.ExecuteScalarAsync();
                 }
             }
         }

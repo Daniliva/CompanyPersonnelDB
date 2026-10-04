@@ -1,4 +1,4 @@
-﻿using Microsoft.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 using Project.DataAccess;
 using Project.Models;
 using Project.Services.Interfaces;
@@ -7,9 +7,9 @@ namespace Project.Services
 {
     public class CompanyService : ICompanyService
     {
-        private readonly DataAccessLayer _dal;
+        private readonly IDataAccess _dal;
 
-        public CompanyService(DataAccessLayer dal)
+        public CompanyService(IDataAccess dal)
         {
             _dal = dal;
         }

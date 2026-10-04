@@ -10,7 +10,7 @@ namespace Project
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-            builder.Services.AddSingleton<DataAccessLayer>(sp =>
+            builder.Services.AddSingleton<IDataAccess>(sp =>
                 new DataAccessLayer(builder.Configuration.GetConnectionString("DefaultConnection")!));
 
 

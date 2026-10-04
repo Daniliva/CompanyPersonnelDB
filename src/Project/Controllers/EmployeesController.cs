@@ -18,7 +18,7 @@ namespace Project.Controllers
             _companyService = companyService;
         }
 
-        public async Task<IActionResult> Index(int? departmentId, int? positionId, string lastName, string firstName, string middleName)
+        public async Task<IActionResult> Index(int? departmentId, int? positionId, string? lastName, string? firstName, string? middleName)
         {
             var employees = await _employeeService.GetEmployeesAsync(1, departmentId, positionId, lastName, firstName, middleName);
 
@@ -41,11 +41,13 @@ namespace Project.Controllers
         }
 
         [HttpPost]
+        // TODO: protect this POST against CSRF.
         public async Task<IActionResult> Details(Employee employee)
         {
             if (ModelState.IsValid)
             {
                 await _employeeService.UpdateEmployeeAsync(employee);
+                // TODO: UpdateEmployeeAsync returns false when no row was changed - answer 404 then.
                 return RedirectToAction("Index");
             }
 

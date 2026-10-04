@@ -1,4 +1,4 @@
-﻿namespace Project.DataAccess;
+namespace Project.DataAccess;
 
 public static class SqlQueries
 {
@@ -12,7 +12,9 @@ public static class SqlQueries
 
     public static string AppendDepartmentFilter => " AND department_id = @departmentId";
     public static string AppendPositionFilter => " AND position_id = @positionId";
-    public static string AppendNameFilter => " AND (last_name LIKE '%' + @lastName + '%' AND first_name LIKE '%' + @firstName + '%' AND middle_name LIKE '%' + @middleName + '%')";
+    public static string OrderSalaryReport => " ORDER BY last_name, first_name, employee_id";
+
+    public static string OrderEmployees => " ORDER BY last_name, first_name, employee_id";
 
     public static string GetEmployeeById => "SELECT employee_id, last_name, first_name, middle_name, address, phone, birth_date, hire_date, salary, department_id, position_id, company_id FROM employees WHERE employee_id = @employeeId;";
 

@@ -1,5 +1,6 @@
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
+using Project.Services;
 using Project.Services.Interfaces;
 
 namespace Project.Controllers;
@@ -37,14 +38,8 @@ public class SalaryReportController : Controller
     {
         var employees = await _salaryService.GetSalaryReportAsync(1, departmentId, positionId);
 
-        var sb = new StringBuilder();
-        sb.AppendLine("Employee ID\tLast Name\tFirst Name\tMiddle Name\tSalary\tDepartment ID\tPosition ID");
+        var text = SalaryReportFormatter.ToTxt(employees);
 
-        foreach (var emp in employees)
-        {
-            sb.AppendLine($"{emp.EmployeeId}\t{emp.LastName}\t{emp.FirstName}\t{emp.MiddleName}\t{emp.Salary}\t{emp.DepartmentId}\t{emp.PositionId}");
-        }
-
-        return File(Encoding.UTF8.GetBytes(sb.ToString()), "text/plain", "salary_report.txt");
+        return File(Encoding.UTF8.GetBytes(text), "text/plain", "salary_report.txt");
     }
 }
